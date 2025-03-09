@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Order Service</h2>
+<p>Danh sách Order (Order Service DB):</p>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Status</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody id="orders-container">
+      <!-- Dữ liệu sẽ được load vào đây -->
+    </tbody>
+  </table>
+</div>
+<hr>
+<button id="btnCreateOrder" class="btn btn-primary">Tạo đơn hàng (theo setup)</button>
+<script>
+  // Load data Order bất đồng bộ
+  function loadOrders() {
+    fetch("http://localhost:5000/orders?limit=20") // Nếu bạn chỉnh sửa API hỗ trợ limit
+      .then(res => res.json())
+      .then(data => {
+        let container = document.getElementById("orders-container");
+        container.innerHTML = "";
+        data.forEach(o => {
+          let row = `<tr>
+                      <td>${o.id}</td>
+                      <td>${o.status}</td>
+                      <td>${o.created_at}</td>
+                    </tr>`;
+          container.innerHTML += row;
+        });
+      })
+      .catch(err => console.error(err));
+  }
+
+  // Gọi loadOrders sau khi trang được render
+  loadOrders();
+
+  document.getElementById('btnCreateOrder').addEventListener('click', function() {
+    fetch('/api/get_setup')
+      .then(res => res.json())
+      .then(settings => {
+        const mode = settings.mode;
+        const bodyData = {
+          mode: mode,
+          fail_payment: settings.error_simulation.payment_service,
+          retry_payment: settings.retry_counts.payment_service,
+          fail_restaurant: settings.error_simulation.restaurant_service,
+          retry_restaurant: settings.retry_counts.restaurant_service,
+          fail_delivery: settings.error_simulation.delivery_service,
+          retry_delivery: settings.retry_counts.delivery_service
+        };
+        console.log("Creating order with:", bodyData);
+        return fetch('http://localhost:5000/order/create', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(bodyData)
+        });
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert("Order created! ID: " + data.order_id);
+        loadOrders(); // Reload danh sách đơn hàng sau khi tạo
+      })
+      .catch(err => console.error(err));
+  });
+</script>
+{% endblock %}

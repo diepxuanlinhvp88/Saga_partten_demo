@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Restaurant Service</h2>
+<p>Danh sách Restaurant Orders (Restaurant Service DB):</p>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Order ID</th>
+        <th>Status</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in restaurant_orders %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.order_id }}</td>
+        <td>{{ r.status }}</td>
+        <td>{{ r.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

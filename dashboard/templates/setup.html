@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Setup Demo Configuration</h2>
+{% if message %}
+  <div class="alert alert-success">{{ message }}</div>
+{% endif %}
+<form method="POST">
+  <div class="mb-3">
+    <label for="mode" class="form-label">Demo Mode</label>
+    <select class="form-select" name="mode" id="mode">
+      <option value="choreography" {% if settings.mode == 'choreography' %}selected{% endif %}>Choreography (Event-based)</option>
+      <option value="orchestration" {% if settings.mode == 'orchestration' %}selected{% endif %}>Orchestration (Command-based)</option>
+    </select>
+  </div>
+  <h4>Error Simulation & Retry Settings</h4>
+  {% for svc in ['order_service', 'payment_service', 'restaurant_service', 'delivery_service'] %}
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" name="error_{{ svc }}" id="error_{{ svc }}" {% if settings.error_simulation[svc] %}checked{% endif %}>
+      <label class="form-check-label" for="error_{{ svc }}">Simulate error in {{ svc.replace('_', ' ').title() }}</label>
+    </div>
+    <div class="mb-3">
+      <label for="retry_{{ svc }}" class="form-label">Retry Count for {{ svc.replace('_', ' ').title() }}</label>
+      <input type="number" class="form-control" name="retry_{{ svc }}" id="retry_{{ svc }}" value="{{ settings.retry_counts[svc] }}">
+    </div>
+  {% endfor %}
+  <button type="submit" class="btn btn-primary">Update Configuration</button>
+</form>
+<hr>
+<h4>Current Configuration:</h4>
+<pre>{{ settings | tojson(indent=2) }}</pre>
+{% endblock %}

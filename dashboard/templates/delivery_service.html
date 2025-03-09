@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Delivery Service</h2>
+<p>Danh sách Delivery (Delivery Service DB):</p>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Order ID</th>
+        <th>Status</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in deliveries %}
+      <tr>
+        <td>{{ d.id }}</td>
+        <td>{{ d.order_id }}</td>
+        <td>{{ d.status }}</td>
+        <td>{{ d.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

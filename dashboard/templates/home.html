@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Kafka Logs</h2>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Topic</th>
+        <th>Partition</th>
+        <th>Offset</th>
+        <th>Message</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="logs-container">
+      {% for log in logs %}
+      <tr>
+        <td>{{ log.id }}</td>
+        <td>{{ log.topic }}</td>
+        <td>{{ log.partition }}</td>
+        <td>{{ log.offset }}</td>
+        <td>{{ log.message }}</td>
+        <td>{{ log.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

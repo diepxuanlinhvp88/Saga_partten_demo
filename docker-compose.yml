@@ -1,0 +1,89 @@
+version: "3.8"
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # Order Service
+  order_service:
+    build:
+      context: ./order
+      dockerfile: Dockerfile
+    container_name: order_service
+    depends_on:
+      - kafka
+    ports:
+      - "5000:5000"
+
+  # Payment Service
+  payment_service:
+    build:
+      context: ./payment
+      dockerfile: Dockerfile
+    container_name: payment_service
+    depends_on:
+      - kafka
+    ports:
+      - "6001:6001"
+
+  # Restaurant Service
+  restaurant_service:
+    build:
+      context: ./restaurant
+      dockerfile: Dockerfile
+    container_name: restaurant_service
+    depends_on:
+      - kafka
+    ports:
+      - "6002:6002"
+
+  # Delivery Service
+  delivery_service:
+    build:
+      context: ./delivery
+      dockerfile: Dockerfile
+    container_name: delivery_service
+    depends_on:
+      - kafka
+    ports:
+      - "6003:6003"
+
+  # Orchestrator Service
+  orchestrator_service:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: orchestrator_service
+    depends_on:
+      - kafka
+    ports:
+      - "7005:7005"
+
+  # Dashboard
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: dashboard
+    depends_on:
+      - kafka
+    ports:
+      - "7000:7000"

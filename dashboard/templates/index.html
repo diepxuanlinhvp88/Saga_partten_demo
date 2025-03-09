@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Saga Pattern Dashboard</title>
+  <link rel="stylesheet" href="\static\style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Sidebar: Chứa menu -->
+    <div class="sidebar">
+      <h2>Dashboard</h2>
+      <ul class="menu">
+        <li><a href="#" data-section="home">Home (Kafka Log)</a></li>
+        <li><a href="#" data-section="order">Order Service</a></li>
+        <li><a href="#" data-section="payment">Payment Service</a></li>
+        <li><a href="#" data-section="restaurant">Restaurant Service</a></li>
+        <li><a href="#" data-section="delivery">Delivery Service</a></li>
+        <li><a href="#" data-section="setup">Setup</a></li>
+      </ul>
+    </div>
+    <!-- Content area: Hiển thị nội dung được chọn -->
+    <div class="content">
+      <div id="content-area">
+        <!-- Nội dung sẽ được load vào đây -->
+      </div>
+    </div>
+  </div>
+  <script src="\static\script.js"></script>
+</body>
+</html>

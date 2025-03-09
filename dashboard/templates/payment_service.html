@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Payment Service</h2>
+<p>Danh sách Payment (Payment Service DB):</p>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Order ID</th>
+        <th>Status</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in payments %}
+      <tr>
+        <td>{{ p.id }}</td>
+        <td>{{ p.order_id }}</td>
+        <td>{{ p.status }}</td>
+        <td>{{ p.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
