@@ -27,6 +27,7 @@ KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
 RESTAURANT_TOPIC = 'restaurant_service'
 ORDER_TOPIC = 'order_service'
 ORCHESTRATOR_TOPIC = 'orchestrator_service'
+COORDINATOR_TOPIC = 'transaction_coordinator'
 
 producer = KafkaProducer(
     bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
@@ -105,6 +106,68 @@ def consume_messages():
             session.add(ro)
             session.commit()
             print(f"[Restaurant] Cancelled order {order_id}")
+
+        elif msg_type == "PrepareCommand":
+            tx_id = message.get("transaction_id")
+            ro = RestaurantOrder(order_id=order_id, status="")
+            if fail_restaurant:
+                # Vote abort
+                ro.status = "prepare_failed"
+                session.add(ro)
+                session.commit()
+                vote = {
+                    "type": "VoteAbort",
+                    "order_id": order_id,
+                    "transaction_id": tx_id,
+                    "participant": "restaurant",
+                    "mode": "2pc"
+                }
+                publish_message(COORDINATOR_TOPIC, vote)
+                print(f"[Restaurant] VoteAbort for tx {tx_id} (order {order_id})")
+            else:
+                # Vote commit
+                ro.status = "prepared"
+                session.add(ro)
+                session.commit()
+                vote = {
+                    "type": "VoteCommit",
+                    "order_id": order_id,
+                    "transaction_id": tx_id,
+                    "participant": "restaurant",
+                    "mode": "2pc"
+                }
+                publish_message(COORDINATOR_TOPIC, vote)
+                print(f"[Restaurant] VoteCommit for tx {tx_id} (order {order_id})")
+
+        elif msg_type == "CommitCommand":
+            tx_id = message.get("transaction_id")
+            ro = RestaurantOrder(order_id=order_id, status="committed")
+            session.add(ro)
+            session.commit()
+            complete = {
+                "type": "CommitComplete",
+                "order_id": order_id,
+                "transaction_id": tx_id,
+                "participant": "restaurant",
+                "mode": "2pc"
+            }
+            publish_message(COORDINATOR_TOPIC, complete)
+            print(f"[Restaurant] CommitComplete for tx {tx_id} (order {order_id})")
+
+        elif msg_type == "AbortCommand":
+            tx_id = message.get("transaction_id")
+            ro = RestaurantOrder(order_id=order_id, status="aborted")
+            session.add(ro)
+            session.commit()
+            complete = {
+                "type": "AbortComplete",
+                "order_id": order_id,
+                "transaction_id": tx_id,
+                "participant": "restaurant",
+                "mode": "2pc"
+            }
+            publish_message(COORDINATOR_TOPIC, complete)
+            print(f"[Restaurant] AbortComplete for tx {tx_id} (order {order_id})")
 
     session.close()
 

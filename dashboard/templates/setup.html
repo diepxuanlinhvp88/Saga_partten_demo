@@ -10,6 +10,7 @@
     <select class="form-select" name="mode" id="mode">
       <option value="choreography" {% if settings.mode == 'choreography' %}selected{% endif %}>Choreography (Event-based)</option>
       <option value="orchestration" {% if settings.mode == 'orchestration' %}selected{% endif %}>Orchestration (Command-based)</option>
+      <option value="2pc" {% if settings.mode == '2pc' %}selected{% endif %}>Two-Phase Commit (2PC)</option>
     </select>
   </div>
   <h4>Error Simulation & Retry Settings</h4>

@@ -1,4 +1,3 @@
-# payment_service.py
 import json
 import threading, time
 import datetime
@@ -27,6 +26,7 @@ KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
 PAYMENT_TOPIC = 'payment_service'
 ORDER_TOPIC = 'order_service'
 ORCHESTRATOR_TOPIC = 'orchestrator_service'
+COORDINATOR_TOPIC = 'transaction_coordinator'
 
 producer = KafkaProducer(
     bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
@@ -80,7 +80,6 @@ def consume_messages():
                     session.add(pay)
                     session.commit()
                     event = {"type": "PaymentFailedEvent", "order_id": order_id}
-                    # Tùy mode => gửi event sang Order Service hoặc Orchestrator
                     if mode == "choreography":
                         publish_message(ORDER_TOPIC, event)
                     else:
@@ -110,6 +109,65 @@ def consume_messages():
             session.add(pay)
             session.commit()
             print(f"[Payment] Payment refunded (order {order_id})")
+
+        elif msg_type == "PrepareCommand":
+            tx_id = message.get("transaction_id")
+            if fail_payment:
+                pay.status = "prepare_failed"
+                session.add(pay)
+                session.commit()
+                vote = {
+                    "type": "VoteAbort",
+                    "order_id": order_id,
+                    "transaction_id": tx_id,
+                    "participant": "payment",
+                    "mode": "2pc"
+                }
+                publish_message(COORDINATOR_TOPIC, vote)
+                print(f"[Payment] VoteAbort for tx {tx_id} (order {order_id})")
+            else:
+                pay.status = "prepared"
+                session.add(pay)
+                session.commit()
+                vote = {
+                    "type": "VoteCommit",
+                    "order_id": order_id,
+                    "transaction_id": tx_id,
+                    "participant": "payment",
+                    "mode": "2pc"
+                }
+                publish_message(COORDINATOR_TOPIC, vote)
+                print(f"[Payment] VoteCommit for tx {tx_id} (order {order_id})")
+
+        elif msg_type == "CommitCommand":
+            tx_id = message.get("transaction_id")
+            pay.status = "committed"
+            session.add(pay)
+            session.commit()
+            complete = {
+                "type": "CommitComplete",
+                "order_id": order_id,
+                "transaction_id": tx_id,
+                "participant": "payment",
+                "mode": "2pc"
+            }
+            publish_message(COORDINATOR_TOPIC, complete)
+            print(f"[Payment] CommitComplete for tx {tx_id} (order {order_id})")
+
+        elif msg_type == "AbortCommand":
+            tx_id = message.get("transaction_id")
+            pay.status = "aborted"
+            session.add(pay)
+            session.commit()
+            complete = {
+                "type": "AbortComplete",
+                "order_id": order_id,
+                "transaction_id": tx_id,
+                "participant": "payment",
+                "mode": "2pc"
+            }
+            publish_message(COORDINATOR_TOPIC, complete)
+            print(f"[Payment] AbortComplete for tx {tx_id} (order {order_id})")
 
     session.close()
 

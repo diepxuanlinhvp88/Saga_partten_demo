@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Transaction Coordinator (2PC)</h2>
+<p>Danh sách các giao dịch 2PC:</p>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Order ID</th>
+        <th>Status</th>
+        <th>Created At</th>
+        <th>Updated At</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tx in transactions %}
+      <tr>
+        <td>{{ tx.id }}</td>
+        <td>{{ tx.order_id }}</td>
+        <td>
+          <span class="badge {% if tx.status == 'committed' %}bg-success{% elif tx.status == 'aborted' %}bg-danger{% else %}bg-warning{% endif %}">
+            {{ tx.status }}
+          </span>
+        </td>
+        <td>{{ tx.created_at }}</td>
+        <td>{{ tx.updated_at }}</td>
+        <td>
+          <a href="{{ url_for('transaction_participants', tx_id=tx.id) }}" class="btn btn-sm btn-info">Xem Participants</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-4">
+  <h3>So sánh 2PC với Saga Pattern</h3>
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h4>Two-Phase Commit (2PC)</h4>
+        </div>
+        <div class="card-body">
+          <h5>Ưu điểm:</h5>
+          <ul>
+            <li>Đảm bảo tính nhất quán mạnh (Strong Consistency)</li>
+            <li>Giao dịch nguyên tử (Atomic) - hoặc tất cả thành công, hoặc tất cả thất bại</li>
+            <li>Dễ hiểu và triển khai hơn so với Saga</li>
+          </ul>
+          <h5>Nhược điểm:</h5>
+          <ul>
+            <li>Blocking - các tài nguyên bị khóa trong quá trình giao dịch</li>
+            <li>Điểm lỗi đơn (Single Point of Failure) tại Transaction Coordinator</li>
+            <li>Hiệu suất thấp hơn do cần đồng bộ giữa các service</li>
+            <li>Khó mở rộng (scale) trong hệ thống phân tán lớn</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-success text-white">
+          <h4>Saga Pattern</h4>
+        </div>
+        <div class="card-body">
+          <h5>Ưu điểm:</h5>
+          <ul>
+            <li>Không blocking - các service có thể hoạt động độc lập</li>
+            <li>Khả năng mở rộng (scalability) tốt hơn</li>
+            <li>Khả năng chịu lỗi cao hơn - không có điểm lỗi đơn</li>
+            <li>Hiệu suất tốt hơn trong hệ thống phân tán lớn</li>
+          </ul>
+          <h5>Nhược điểm:</h5>
+          <ul>
+            <li>Chỉ đảm bảo tính nhất quán cuối cùng (Eventual Consistency)</li>
+            <li>Phức tạp hơn trong việc thiết kế và triển khai</li>
+            <li>Cần xử lý các giao dịch bù trừ (compensating transactions)</li>
+            <li>Khó debug và theo dõi luồng giao dịch</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

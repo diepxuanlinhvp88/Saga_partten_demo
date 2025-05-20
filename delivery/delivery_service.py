@@ -27,6 +27,7 @@ KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
 DELIVERY_TOPIC = 'delivery_service'
 ORDER_TOPIC = 'order_service'
 ORCHESTRATOR_TOPIC = 'orchestrator_service'
+COORDINATOR_TOPIC = 'transaction_coordinator'
 
 producer = KafkaProducer(
     bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
@@ -91,6 +92,68 @@ def consume_messages():
                 else:
                     publish_message(ORCHESTRATOR_TOPIC, event)
                 print(f"[Delivery] DeliveryScheduledEvent => {mode} (order {order_id})")
+
+        elif msg_type == "PrepareCommand":
+            tx_id = message.get("transaction_id")
+            d = Delivery(order_id=order_id, status="")
+            if fail_delivery:
+                # Vote abort
+                d.status = "prepare_failed"
+                session.add(d)
+                session.commit()
+                vote = {
+                    "type": "VoteAbort",
+                    "order_id": order_id,
+                    "transaction_id": tx_id,
+                    "participant": "delivery",
+                    "mode": "2pc"
+                }
+                publish_message(COORDINATOR_TOPIC, vote)
+                print(f"[Delivery] VoteAbort for tx {tx_id} (order {order_id})")
+            else:
+                # Vote commit
+                d.status = "prepared"
+                session.add(d)
+                session.commit()
+                vote = {
+                    "type": "VoteCommit",
+                    "order_id": order_id,
+                    "transaction_id": tx_id,
+                    "participant": "delivery",
+                    "mode": "2pc"
+                }
+                publish_message(COORDINATOR_TOPIC, vote)
+                print(f"[Delivery] VoteCommit for tx {tx_id} (order {order_id})")
+
+        elif msg_type == "CommitCommand":
+            tx_id = message.get("transaction_id")
+            d = Delivery(order_id=order_id, status="committed")
+            session.add(d)
+            session.commit()
+            complete = {
+                "type": "CommitComplete",
+                "order_id": order_id,
+                "transaction_id": tx_id,
+                "participant": "delivery",
+                "mode": "2pc"
+            }
+            publish_message(COORDINATOR_TOPIC, complete)
+            print(f"[Delivery] CommitComplete for tx {tx_id} (order {order_id})")
+
+        elif msg_type == "AbortCommand":
+            tx_id = message.get("transaction_id")
+            d = Delivery(order_id=order_id, status="aborted")
+            session.add(d)
+            session.commit()
+            complete = {
+                "type": "AbortComplete",
+                "order_id": order_id,
+                "transaction_id": tx_id,
+                "participant": "delivery",
+                "mode": "2pc"
+            }
+            publish_message(COORDINATOR_TOPIC, complete)
+            print(f"[Delivery] AbortComplete for tx {tx_id} (order {order_id})")
 
     session.close()
 

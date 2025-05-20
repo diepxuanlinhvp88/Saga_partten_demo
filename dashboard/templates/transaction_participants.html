@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Transaction Participants (2PC)</h2>
+<p>Chi tiết giao dịch #{{ tx_id }}:</p>
+
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Participant</th>
+        <th>Status</th>
+        <th>Vote</th>
+        <th>Created At</th>
+        <th>Updated At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in participants %}
+      <tr>
+        <td>{{ p.id }}</td>
+        <td>{{ p.participant }}</td>
+        <td>
+          <span class="badge {% if p.status == 'committed' %}bg-success{% elif p.status == 'aborted' %}bg-danger{% elif p.status == 'prepared' %}bg-info{% else %}bg-warning{% endif %}">
+            {{ p.status }}
+          </span>
+        </td>
+        <td>
+          {% if p.vote == true %}
+            <span class="badge bg-success">Commit</span>
+          {% elif p.vote == false %}
+            <span class="badge bg-danger">Abort</span>
+          {% else %}
+            <span class="badge bg-secondary">Chưa vote</span>
+          {% endif %}
+        </td>
+        <td>{{ p.created_at }}</td>
+        <td>{{ p.updated_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-4">
+  <a href="{{ url_for('transaction_coordinator') }}" class="btn btn-primary">Quay lại danh sách giao dịch</a>
+</div>
+
+<div class="mt-4">
+  <h3>Các giai đoạn của 2PC</h3>
+  <div class="card">
+    <div class="card-body">
+      <h5>Giai đoạn 1: Prepare (Chuẩn bị)</h5>
+      <ul>
+        <li>Transaction Coordinator gửi lệnh <code>PrepareCommand</code> đến tất cả các participant</li>
+        <li>Mỗi participant chuẩn bị tài nguyên và khóa dữ liệu</li>
+        <li>Mỗi participant trả lời bằng <code>VoteCommit</code> hoặc <code>VoteAbort</code></li>
+      </ul>
+      
+      <h5>Giai đoạn 2: Commit/Abort (Hoàn thành/Hủy bỏ)</h5>
+      <ul>
+        <li>Nếu tất cả participant đều trả lời <code>VoteCommit</code>, Transaction Coordinator gửi lệnh <code>CommitCommand</code></li>
+        <li>Nếu có bất kỳ participant nào trả lời <code>VoteAbort</code>, Transaction Coordinator gửi lệnh <code>AbortCommand</code></li>
+        <li>Các participant thực hiện commit hoặc abort và trả lời <code>CommitComplete</code> hoặc <code>AbortComplete</code></li>
+        <li>Transaction Coordinator cập nhật trạng thái cuối cùng của giao dịch</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,4 +1,3 @@
-# order_service.py
 import json
 import threading, datetime
 from flask import Flask, request, jsonify
@@ -27,6 +26,7 @@ ORCHESTRATOR_TOPIC = 'orchestrator_service'
 PAYMENT_TOPIC = 'payment_service'
 RESTAURANT_TOPIC = 'restaurant_service'
 DELIVERY_TOPIC = 'delivery_service'
+COORDINATOR_TOPIC = 'transaction_coordinator'
 
 producer = KafkaProducer(
     bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
@@ -59,8 +59,6 @@ def consume_messages():
         if msg_type == "PaymentReservedEvent":
             order.status = "payment_reserved"
             session.commit()
-            # CHOREOGRAPHY: (mode=choreography) => RestaurantConfirmCommand
-            # ORCHESTRATION: event này do Orchestrator handle => N/A
             if message.get("mode") == "choreography":
                 cmd = {
                     "type": "RestaurantConfirmCommand",
@@ -114,6 +112,16 @@ def consume_messages():
                 publish_message(PAYMENT_TOPIC, cmd2)
                 print(f"[Order Service] -> CancelRestaurant & RefundPayment (choreography)")
 
+        elif msg_type == "TransactionCompletedEvent":
+            order.status = "completed"
+            session.commit()
+            print(f"[Order Service] Transaction completed for order {order_id}")
+
+        elif msg_type == "TransactionAbortedEvent":
+            order.status = "failed"
+            session.commit()
+            print(f"[Order Service] Transaction aborted for order {order_id}")
+
     session.close()
 
 def start_consumer():
@@ -123,9 +131,8 @@ def start_consumer():
 @app.route("/order/create", methods=["POST"])
 def create_order():
     data = request.json or {}
-    mode = "choreography"  # default
-    # Lấy mode nếu có
-    if data.get("mode") in ["choreography", "orchestration"]:
+    mode = "choreography"
+    if data.get("mode") in ["choreography", "orchestration", "2pc"]:
         mode = data["mode"]
 
     fail_payment = data.get("fail_payment", False)
@@ -145,7 +152,6 @@ def create_order():
     print(f"[Order Service] Created order {order_id}, mode={mode}")
 
     if mode == "choreography":
-        # Gửi PaymentReserveCommand như cũ
         cmd = {
             "type": "PaymentReserveCommand",
             "order_id": order_id,
@@ -159,8 +165,7 @@ def create_order():
         }
         publish_message(PAYMENT_TOPIC, cmd)
         print(f"[Order Service] -> PaymentReserveCommand (choreography)")
-    else:
-        # Orchestration => gửi OrderCreatedEvent sang orchestrator_service
+    elif mode == "orchestration":
         event = {
             "type": "OrderCreatedEvent",
             "order_id": order_id,
@@ -174,6 +179,17 @@ def create_order():
         }
         publish_message(ORCHESTRATOR_TOPIC, event)
         print(f"[Order Service] -> OrderCreatedEvent (orchestration)")
+    else:
+        event = {
+            "type": "InitiateTransaction",
+            "order_id": order_id,
+            "mode": "2pc",
+            "fail_payment": fail_payment,
+            "fail_restaurant": fail_restaurant,
+            "fail_delivery": fail_delivery
+        }
+        publish_message(COORDINATOR_TOPIC, event)
+        print(f"[Order Service] -> InitiateTransaction (2pc)")
 
     return jsonify({"order_id": order_id, "status": "initiated", "mode": mode})
 

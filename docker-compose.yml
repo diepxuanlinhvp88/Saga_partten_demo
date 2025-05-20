@@ -77,6 +77,17 @@ services:
     ports:
       - "7005:7005"
 
+  # Transaction Coordinator Service
+  transaction_coordinator:
+    build:
+      context: ./transaction_coordinator
+      dockerfile: Dockerfile
+    container_name: transaction_coordinator
+    depends_on:
+      - kafka
+    ports:
+      - "7006:7006"
+
   # Dashboard
   dashboard:
     build:
